@@ -5,6 +5,9 @@ on:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: write
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -26,6 +29,10 @@ jobs:
           lines = totals["percent_statements_covered"]
           branches = totals["percent_branches_covered"]
           print(f"lines {lines:.2f}% branches {branches:.2f}%")
+          open(".coverage-percent", "w").write(str(lines))
           if lines < 80 or branches < 80:
               raise SystemExit("coverage is below 80%")
           PY
+      - name: Publish coverage badge
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && matrix.python == '3.11'
+        run: bash .github/publish-coverage-badge.sh "$(cat .coverage-percent)"
