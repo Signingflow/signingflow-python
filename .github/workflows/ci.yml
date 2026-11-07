@@ -6,11 +6,14 @@ on:
   pull_request:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   test:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write
     strategy:
       matrix:
         python: ["3.11", "3.15"]
@@ -33,8 +36,25 @@ jobs:
           if lines < 80 or branches < 80:
               raise SystemExit("coverage is below 80%")
           PY
-      - name: Publish coverage badge
+      - uses: actions/upload-artifact@v4
         if: github.event_name == 'push' && github.ref == 'refs/heads/main' && matrix.python == '3.11'
-        env:
+        with:
+          name: coverage-percent
+          path: .coverage-percent
+          retention-days: 1
+
+  badge:
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: coverage-percent
+      - env:
           GITHUB_TOKEN: ${{ github.token }}
         run: bash .github/publish-coverage-badge.sh "$(cat .coverage-percent)"
